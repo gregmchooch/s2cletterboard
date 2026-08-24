@@ -1,0 +1,348 @@
+import React, { useRef, useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  PanResponder,
+  Dimensions,
+} from 'react-native';
+
+const StencilBoard = ({ onLetterSelected }) => {
+  const [magnifierPos, setMagnifierPos] = useState(null);
+  const [magnifiedLetters, setMagnifiedLetters] = useState(new Set());
+  const boardRef = useRef(null);
+
+  // Constants for layout
+  const MAGNIFY_RADIUS = 80;
+  const MAGNIFY_SCALE = 2.0;
+  const BOARD_PADDING = 6;
+  const GRID_GAP = 4;
+  const COLUMNS = 5;
+  const ROWS = 5;
+  const SPACE_BAR_WIDTH = 45;
+
+  // Letters A-Z: 5 columns for rows 1-5, plus column 6 with space bar (rows 1-4) and Z (row 5)
+  // Structure: each row has 5 letters, plus a 6th position for space bar or Z
+  const LETTERS = [
+    ['A', 'B', 'C', 'D', 'E', ' '],    // Row 1: space bar placeholder
+    ['F', 'G', 'H', 'I', 'J', ' '],    // Row 2: space bar placeholder
+    ['K', 'L', 'M', 'N', 'O', ' '],    // Row 3: space bar placeholder
+    ['P', 'Q', 'R', 'S', 'T', ' '],    // Row 4: space bar placeholder
+    ['U', 'V', 'W', 'X', 'Y', 'Z'],    // Row 5: Z instead of space bar
+  ];
+
+  const windowWidth = Dimensions.get('window').width;
+  const windowHeight = Dimensions.get('window').height;
+
+  // Board dimensions
+  const boardWidth = windowWidth - 30;
+  const boardHeight = windowHeight * 0.65;
+
+  // Handle board layout measurement
+  const handleBoardLayout = (event) => {
+    // Layout is captured but not needed for current implementation
+  };
+
+  // Calculate letter tile dimensions
+  // We need to account for 5 main columns + 1 space bar column
+  const letterWidth = (boardWidth - BOARD_PADDING * 2 - (GRID_GAP * 6)) / (COLUMNS + 1);
+  const letterHeight = (boardHeight - BOARD_PADDING * 2 - (GRID_GAP * (ROWS - 1))) / ROWS;
+
+  // Get letter position by grid coordinates (relative to board)
+  const getLetterPosition = (row, col) => {
+    const x = BOARD_PADDING + col * (letterWidth + GRID_GAP);
+    const y = BOARD_PADDING + row * (letterHeight + GRID_GAP);
+    return { x, y, width: letterWidth, height: letterHeight };
+  };
+
+  // Check which letters are within magnifier radius
+  const getLettersInRadius = (touchX, touchY) => {
+    const magnified = new Set();
+    for (let row = 0; row < ROWS; row++) {
+      const rowLetters = LETTERS[row];
+      for (let col = 0; col < rowLetters.length; col++) {
+        const letter = rowLetters[col];
+        if (letter === ' ') continue; // Skip space bar tiles
+
+        const pos = getLetterPosition(row, col);
+        const letterCenterX = pos.x + pos.width / 2;
+        const letterCenterY = pos.y + pos.height / 2;
+        const distance = Math.sqrt(
+          Math.pow(letterCenterX - touchX, 2) + Math.pow(letterCenterY - touchY, 2)
+        );
+        if (distance <= MAGNIFY_RADIUS) {
+          magnified.add(`${row}-${col}`);
+        }
+      }
+    }
+    return magnified;
+  };
+
+  // Get letter at position - find the SINGLE closest letter
+  const getLetterAtPosition = (touchX, touchY) => {
+    let closestLetter = null;
+    let closestDistance = Infinity;
+
+    for (let row = 0; row < ROWS; row++) {
+      const rowLetters = LETTERS[row];
+      for (let col = 0; col < rowLetters.length; col++) {
+        const letter = rowLetters[col];
+        if (letter === ' ') continue; // Skip space bar tiles
+
+        const pos = getLetterPosition(row, col);
+
+        // Check if touch is within this letter's bounds
+        if (
+          touchX >= pos.x &&
+          touchX <= pos.x + pos.width &&
+          touchY >= pos.y &&
+          touchY <= pos.y + pos.height
+        ) {
+          // Touch is directly on this letter, return it immediately
+          return letter;
+        }
+
+        // Otherwise track the closest letter by distance
+        const letterCenterX = pos.x + pos.width / 2;
+        const letterCenterY = pos.y + pos.height / 2;
+        const distance = Math.sqrt(
+          Math.pow(letterCenterX - touchX, 2) + Math.pow(letterCenterY - touchY, 2)
+        );
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestLetter = letter;
+        }
+      }
+    }
+
+    // Check space bar
+    const spaceBarLeft = BOARD_PADDING + COLUMNS * (letterWidth + GRID_GAP) + letterWidth / 4;
+    const spaceBarTop = BOARD_PADDING;
+    const spaceBarWidth = letterWidth / 2;
+    const spaceBarHeight = letterHeight;
+
+    for (let row = 0; row < 3; row++) {
+      const tileTop = spaceBarTop + row * (letterHeight + GRID_GAP);
+      if (
+        touchX >= spaceBarLeft &&
+        touchX <= spaceBarLeft + spaceBarWidth &&
+        touchY >= tileTop &&
+        touchY <= tileTop + spaceBarHeight
+      ) {
+        return ' ';
+      }
+    }
+
+    // Return closest letter if found, otherwise null
+    return closestLetter;
+  };
+
+  // Create PanResponder
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (evt) => {
+          const pageX = evt.nativeEvent.pageX;
+          const pageY = evt.nativeEvent.pageY;
+
+          if (boardRef.current) {
+            boardRef.current.measure((x, y, width, height, pageXBoard, pageYBoard) => {
+              const relativeX = pageX - pageXBoard;
+              const relativeY = pageY - pageYBoard;
+
+              setMagnifierPos({ x: relativeX, y: relativeY });
+              const magnified = getLettersInRadius(relativeX, relativeY);
+              setMagnifiedLetters(magnified);
+            });
+          }
+        },
+        onPanResponderMove: (evt) => {
+          const pageX = evt.nativeEvent.pageX;
+          const pageY = evt.nativeEvent.pageY;
+
+          if (boardRef.current) {
+            boardRef.current.measure((x, y, width, height, pageXBoard, pageYBoard) => {
+              const relativeX = pageX - pageXBoard;
+              const relativeY = pageY - pageYBoard;
+
+              setMagnifierPos({ x: relativeX, y: relativeY });
+              const magnified = getLettersInRadius(relativeX, relativeY);
+              setMagnifiedLetters(magnified);
+            });
+          }
+        },
+        onPanResponderRelease: (evt) => {
+          const pageX = evt.nativeEvent.pageX;
+          const pageY = evt.nativeEvent.pageY;
+
+          if (boardRef.current) {
+            boardRef.current.measure((x, y, width, height, pageXBoard, pageYBoard) => {
+              const relativeX = pageX - pageXBoard;
+              const relativeY = pageY - pageYBoard;
+
+              const letter = getLetterAtPosition(relativeX, relativeY);
+              if (letter) {
+                onLetterSelected(letter);
+              }
+            });
+          }
+
+          setMagnifierPos(null);
+          setMagnifiedLetters(new Set());
+        },
+        onPanResponderTerminate: () => {
+          setMagnifierPos(null);
+          setMagnifiedLetters(new Set());
+        },
+      }),
+    []
+  );
+
+  const renderLetter = (letter, row, col) => {
+    const magnifyKey = `${row}-${col}`;
+    const isMagnified = magnifiedLetters.has(magnifyKey);
+    const scale = isMagnified ? MAGNIFY_SCALE : 1;
+
+    return (
+      <View
+        key={magnifyKey}
+        style={[
+          styles.letterTile,
+          {
+            width: letterWidth,
+            height: letterHeight,
+            transform: [{ scale }],
+          },
+          isMagnified && styles.letterMagnified,
+        ]}
+      >
+        <Text style={styles.letterText}>{letter}</Text>
+      </View>
+    );
+  };
+
+  return (
+    <View
+      ref={boardRef}
+      onLayout={handleBoardLayout}
+      style={[
+        styles.board,
+        {
+          width: boardWidth,
+          height: boardHeight,
+        },
+      ]}
+      {...panResponder.panHandlers}
+    >
+      {/* Letter grid in absolute positioning */}
+      {LETTERS.map((row, rowIdx) =>
+        row.map((letter, colIdx) => {
+          const pos = getLetterPosition(rowIdx, colIdx);
+          const isSpaceBarTile = letter === ' ';
+
+          if (isSpaceBarTile) {
+            // Space bar tiles are transparent/invisible, space bar rendered separately
+            return null;
+          }
+
+          return (
+            <View
+              key={`${rowIdx}-${colIdx}`}
+              style={[
+                styles.letterTile,
+                {
+                  position: 'absolute',
+                  left: pos.x,
+                  top: pos.y,
+                  width: letterWidth,
+                  height: letterHeight,
+                  transform: [
+                    {
+                      scale: magnifiedLetters.has(`${rowIdx}-${colIdx}`)
+                        ? MAGNIFY_SCALE
+                        : 1,
+                    },
+                  ],
+                },
+                magnifiedLetters.has(`${rowIdx}-${colIdx}`) &&
+                  styles.letterMagnified,
+              ]}
+            >
+              <Text style={styles.letterText}>{letter}</Text>
+            </View>
+          );
+        })
+      )}
+
+      {/* Space bar - Column 6, rows 1-3 only */}
+      <View
+        style={[
+          styles.spaceBar,
+          {
+            position: 'absolute',
+            left: BOARD_PADDING + COLUMNS * (letterWidth + GRID_GAP) + letterWidth / 4,
+            top: BOARD_PADDING,
+            width: letterWidth / 2,
+            height: letterHeight * 3 + GRID_GAP * 2,
+          },
+        ]}
+      />
+
+      {/* Magnifier circle */}
+      {magnifierPos && (
+        <View
+          style={[
+            styles.magnifierCircle,
+            {
+              left: magnifierPos.x - MAGNIFY_RADIUS,
+              top: magnifierPos.y - MAGNIFY_RADIUS,
+              width: MAGNIFY_RADIUS * 2,
+              height: MAGNIFY_RADIUS * 2,
+            },
+          ]}
+        />
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  board: {
+    backgroundColor: '#2a2a2a',
+    borderWidth: 8,
+    borderColor: '#FFD700',
+    borderRadius: 25,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  letterTile: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  letterText: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: '#FFD700',
+  },
+  letterMagnified: {
+    zIndex: 5,
+  },
+  spaceBar: {
+    backgroundColor: '#FFD700',
+    borderRadius: 25,
+  },
+  magnifierCircle: {
+    position: 'absolute',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 215, 0, 0.5)',
+    borderRadius: 100,
+    pointerEvents: 'none',
+    zIndex: 10,
+  },
+});
+
+export default StencilBoard;

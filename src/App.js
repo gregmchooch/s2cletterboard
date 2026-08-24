@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import StencilBoard from './src/components/StencilBoard';
-import ControlPanel from './src/components/ControlPanel';
+import StencilBoard from './components/StencilBoard';
+import ControlPanel from './components/ControlPanel';
 
 const App = () => {
   const [selectedLetters, setSelectedLetters] = useState([]);
@@ -13,7 +13,7 @@ const App = () => {
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
   const handleLetterSelected = (letter) => {
-    setSelectedLetters((prevLetters) => [...prevLetters, letter]);
+    setSelectedLetters([...selectedLetters, letter]);
   };
 
   const handleRemoveLast = () => {

@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+    <title>Interactive Stencil - Word Speller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* STENCIL BOARD SECTION */
+        .board-section {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1a1a1a;
+            border-bottom: none;
+            min-height: 50%;
+        }
+
+        #stencilBoard {
+            background: #2a2a2a;
+            border: 8px solid #FFD700;
+            border-radius: 25px;
+            padding: 6px 4px 60px 0px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr) 45px;
+            grid-template-rows: repeat(5, 1fr) auto;
+            gap: 4px;
+            width: 100%;
+            height: 100%;
+            max-width: 95vw;
+            max-height: 95vh;
+            aspect-ratio: auto;
+            position: relative;
+            cursor: crosshair;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .letter-tile {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 5rem;
+            font-weight: bold;
+            color: #FFD700;
+            transition: all 0.1s ease-out;
+            cursor: pointer;
+            position: relative;
+            min-height: 80px;
+            min-width: 40px;
+        }
+
+        .letter-tile.space-handle {
+            background: #FFD700;
+            border: none;
+            border-radius: 30px;
+            font-size: 0;
+            color: transparent;
+            font-weight: bold;
+            grid-column: 6;
+            grid-row: 1 / 5;
+            writing-mode: normal;
+            text-orientation: mixed;
+            transform: none;
+            cursor: pointer;
+        }
+
+        .letter-tile:hover {
+            box-shadow: none;
+        }
+
+        .letter-tile.zoomed {
+            background: transparent;
+            box-shadow: none;
+            z-index: 5;
+        }
+
+        .magnifier-circle {
+            position: absolute;
+            border: 3px solid rgba(255, 215, 0, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3) inset, 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        /* CONTROL SECTION */
+        .control-section {
+            flex: 0 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 10px 15px 0px 15px;
+            background: #222;
+            border-top: none;
+            min-height: auto;
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-label {
+            font-size: 0.65rem;
+            color: #FFD700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+            white-space: nowrap;
+            padding-right: 5px;
+        }
+
+        .control-content {
+            background: #333;
+            border: 3px solid #FFD700;
+            border-radius: 12px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 35px;
+            flex: 1;
+            position: relative;
+        }
+
+        .word-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #FFD700;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .history-display {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #FFD700;
+            letter-spacing: 2px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            max-height: 40px;
+            overflow-y: auto;
+            word-break: break-word;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-content: center;
+            justify-content: center;
+        }
+
+        .history-item {
+            display: inline-flex;
+            align-items: center;
+            background: #444;
+            padding: 6px 12px;
+            border-radius: 6px;
+            gap: 8px;
+            position: relative;
+        }
+
+        .history-item span {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .history-item .delete-btn {
+            background: #FF5252;
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .history-item .delete-btn:hover {
+            background: #FF1744;
+        }
+
+        .history-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .history-modal.active {
+            display: flex;
+        }
+
+        .history-modal-content {
+            background: #333;
+            border: 4px solid #FFD700;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .history-modal h2 {
+            color: #FFD700;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5rem;
+        }
+
+        .history-modal-close-link {
+            color: #FFD700;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.9rem;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            padding: 0;
+            font-weight: bold;
+        }
+
+        .history-modal-close-link:hover {
+            color: #FFC700;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .history-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .history-list::-webkit-scrollbar-track {
+            background: #222;
+            border-radius: 10px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb {
+            background: #FFD700;
+            border-radius: 10px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb:hover {
+            background: #FFC700;
+        }
+
+        .history-entry {
+            background: #444;
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .history-entry-word {
+            font-size: 1.2rem;
+            color: #FFD700;
+            font-weight: bold;
+            letter-spacing: 2px;
+            flex: 1;
+        }
+
+        .history-entry-delete {
+            background: #FF5252;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.75rem;
+            transition: background 0.2s;
+        }
+
+        .history-entry-delete:hover {
+            background: #FF1744;
+        }
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .history-entry-delete:hover {
+            background: #FF1744;
+        }
+
+        /* BUTTONS */
+        .button-row {
+            display: none;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-remove {
+            background: #FF9800;
+        }
+
+        .btn-remove:hover:not(:disabled) {
+            background: #F57C00;
+        }
+
+        .btn-submit {
+            background: #4CAF50;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background: #45a049;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-message {
+            color: #666;
+            font-size: 0.85rem;
+            letter-spacing: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .control-section {
+                grid-template-columns: 1fr;
+            }
+
+            .letter-tile {
+                font-size: 4rem;
+                min-height: 70px;
+                min-width: 70px;
+            }
+
+            #stencilBoard {
+                gap: 12px;
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .board-section {
+                padding: 10px;
+            }
+
+            #stencilBoard {
+                gap: 10px;
+                padding: 15px;
+                border-width: 6px;
+                border-radius: 20px;
+            }
+
+            .letter-tile {
+                font-size: 2.5rem;
+                min-height: 50px;
+                min-width: 50px;
+            }
+
+            .word-display {
+                font-size: 2rem;
+                letter-spacing: 4px;
+            }
+
+            .control-section {
+                padding: 15px;
+                gap: 10px;
+                min-height: 180px;
+            }
+
+            .btn {
+                padding: 10px 15px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="board-section">
+            <div id="stencilBoard">
+                <div class="magnifier-circle"></div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="control-panel">
+                <div class="control-label">Spelled</div>
+                <div class="control-content">
+                    <div class="word-display" id="wordDisplay">—</div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="control-label">History</div>
+                <div class="control-content history-display" id="historyDisplay">
+                    <span class="empty-message">No words stored yet</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; padding: 6px 15px 8px 15px; background: #222;">
+            <button class="btn btn-remove" id="removeBtn" style="flex: 1;">? Remove Letter</button>
+            <button class="btn btn-submit" id="submitBtn" style="flex: 1;">? Store Word</button>
+        </div>
+    </div>
+
+    <div class="history-modal" id="historyModal">
+        <div class="history-modal-content">
+            <a href="#" class="history-modal-close-link" id="historyModalClose">CLOSE</a>
+            <h2>Word History</h2>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        // A-Z letters: 5 rows with 5 letters, then 1 row with 6 letters (U-Z)
+        const LETTERS = [
+            'A', 'B', 'C', 'D', 'E',
+            'F', 'G', 'H', 'I', 'J',
+            'K', 'L', 'M', 'N', 'O',
+            'P', 'Q', 'R', 'S', 'T',
+            'U', 'V', 'W', 'X', 'Y', 'Z'
+        ];
+
+        const MAGNIFY_RADIUS = 150;
+        const MAGNIFY_SCALE = 2.8;
+
+        let selectedLetters = [];
+        let wordHistory = [];
+
+        const board = document.getElementById('stencilBoard');
+        const wordDisplay = document.getElementById('wordDisplay');
+        const historyDisplay = document.getElementById('historyDisplay');
+        const removeBtn = document.getElementById('removeBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const magnifier = board.querySelector('.magnifier-circle');
+        const historyModal = document.getElementById('historyModal');
+        const historyModalClose = document.getElementById('historyModalClose');
+        const historyList = document.getElementById('historyList');
+
+        let historyExpanded = false;
+
+        // Create letter tiles - A to Z (5 per row)
+        LETTERS.forEach((letter) => {
+            const tile = document.createElement('div');
+            tile.className = 'letter-tile';
+            tile.textContent = letter;
+            tile.dataset.letter = letter;
+            board.appendChild(tile);
+        });
+
+        // Add space handle (vertical bar on the right, spans all 5 rows)
+        const spaceHandle = document.createElement('div');
+        spaceHandle.className = 'letter-tile space-handle';
+        spaceHandle.textContent = '';  // No visible text, just the yellow bar
+        spaceHandle.dataset.letter = ' ';
+        board.appendChild(spaceHandle);
+
+        // Store tile references
+        const tiles = Array.from(board.querySelectorAll('.letter-tile:not(.space-handle)'));
+        const spaceTile = board.querySelector('.letter-tile.space-handle');
+
+        function calculateDistance(x1, y1, x2, y2) {
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        }
+
+        function updateMagnifier(x, y) {
+            const boardRect = board.getBoundingClientRect();
+            const boardX = boardRect.left;
+            const boardY = boardRect.top;
+
+            magnifier.style.display = 'block';
+            magnifier.style.left = (x - boardX - MAGNIFY_RADIUS / 2) + 'px';
+            magnifier.style.top = (y - boardY - MAGNIFY_RADIUS / 2) + 'px';
+            magnifier.style.width = MAGNIFY_RADIUS + 'px';
+            magnifier.style.height = MAGNIFY_RADIUS + 'px';
+
+            // Only magnify the letter directly under cursor
+            tiles.concat([spaceTile]).forEach(tile => {
+                const tileRect = tile.getBoundingClientRect();
+                const tileCenterX = tileRect.left + tileRect.width / 2;
+                const tileCenterY = tileRect.top + tileRect.height / 2;
+
+                const distance = calculateDistance(x, y, tileCenterX, tileCenterY);
+
+                // Only magnify if very close (within 40px of center)
+                if (distance < 40) {
+                    tile.style.transform = `scale(${MAGNIFY_SCALE})`;
+                    tile.classList.add('zoomed');
+                } else {
+                    tile.style.transform = 'scale(1)';
+                    tile.classList.remove('zoomed');
+                }
+            });
+        }
+
+        function hideMagnifier() {
+            magnifier.style.display = 'none';
+            tiles.concat([spaceTile]).forEach(tile => {
+                tile.style.transform = 'scale(1)';
+                tile.classList.remove('zoomed');
+            });
+        }
+
+        function onLetterSelected(letter) {
+            selectedLetters.push(letter);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const word = selectedLetters.join('');
+            wordDisplay.textContent = word || '—';
+
+            removeBtn.disabled = selectedLetters.length === 0;
+            submitBtn.disabled = selectedLetters.length === 0;
+        }
+
+        function removeLast() {
+            if (selectedLetters.length > 0) {
+                selectedLetters.pop();
+                updateDisplay();
+            }
+        }
+
+        function storeWord() {
+            const word = selectedLetters.join('');
+            if (word.trim().length > 0) {
+                wordHistory.unshift(word); // Add to beginning
+                updateHistoryDisplay();
+                selectedLetters = [];
+                updateDisplay();
+            }
+        }
+
+        function updateHistoryDisplay() {
+            if (wordHistory.length === 0) {
+                historyDisplay.innerHTML = '<span class="empty-message">No words stored yet</span>';
+                return;
+            }
+
+            historyDisplay.innerHTML = wordHistory.map((word, index) => `
+                <div class="history-item">
+                    <span>${word}</span>
+                    <button class="delete-btn" data-index="${index}">×</button>
+                </div>
+            `).join('');
+
+            // Add delete handlers
+            historyDisplay.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    wordHistory.splice(index, 1);
+                    updateHistoryDisplay();
+                });
+            });
+        }
+
+        function toggleHistoryModal() {
+            historyExpanded = !historyExpanded;
+            historyModal.classList.toggle('active');
+
+            if (historyExpanded) {
+                updateHistoryModalContent();
+            }
+        }
+
+        function updateHistoryModalContent() {
+            if (wordHistory.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: #999; font-size: 1.2rem;">No words stored yet</p>';
+                return;
+            }
+
+            historyList.innerHTML = wordHistory.map((word, index) => `
+                <div class="history-entry">
+                    <div class="history-entry-word">${word}</div>
+                    <button class="history-entry-delete" data-index="${index}">Delete</button>
+                </div>
+            `).join('');
+
+            // Add delete handlers in modal
+            historyList.querySelectorAll('.history-entry-delete').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    wordHistory.splice(index, 1);
+                    updateHistoryDisplay();
+                    updateHistoryModalContent();
+                });
+            });
+        }
+
+        // Event listeners
+        board.addEventListener('mousemove', (e) => {
+            updateMagnifier(e.clientX, e.clientY);
+        });
+
+        board.addEventListener('mouseleave', hideMagnifier);
+
+        board.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            updateMagnifier(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        board.addEventListener('touchend', hideMagnifier);
+
+        // Letter selection with strong tap detection
+        tiles.concat([spaceTile]).forEach(tile => {
+            let pressStartTime = null;
+
+            tile.addEventListener('mousedown', () => {
+                pressStartTime = Date.now();
+            });
+
+            tile.addEventListener('mouseup', () => {
+                const pressDuration = Date.now() - pressStartTime;
+                if (pressDuration > 100) {
+                    onLetterSelected(tile.dataset.letter);
+                }
+            });
+
+            tile.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                pressStartTime = Date.now();
+            });
+
+            tile.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                const pressDuration = Date.now() - pressStartTime;
+
+                if (pressDuration > 150 && element && (element.classList.contains('letter-tile'))) {
+                    const letter = element.dataset.letter;
+                    if (letter) {
+                        onLetterSelected(letter);
+                    }
+                }
+            });
+        });
+
+        // Button handlers
+        removeBtn.addEventListener('click', removeLast);
+        submitBtn.addEventListener('click', storeWord);
+        historyDisplay.addEventListener('click', toggleHistoryModal);
+        historyModalClose.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleHistoryModal();
+        });
+
+        // Close modal when clicking outside (on the overlay)
+        historyModal.addEventListener('click', function(e) {
+            if (e.target === historyModal) {
+                toggleHistoryModal();
+            }
+        });
+
+        // Initialize
+        updateDisplay();
+        updateHistoryDisplay();
+    </script>
+</body>
+</html>
