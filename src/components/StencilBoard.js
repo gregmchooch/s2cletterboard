@@ -7,7 +7,7 @@ import {
   Dimensions,
 } from 'react-native';
 
-const StencilBoard = ({ onLetterSelected }) => {
+const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
   const [magnifierPos, setMagnifierPos] = useState(null);
   const [magnifiedLetters, setMagnifiedLetters] = useState(new Set());
   const boardRef = useRef(null);
@@ -21,8 +21,7 @@ const StencilBoard = ({ onLetterSelected }) => {
   const ROWS = 5;
   const SPACE_BAR_WIDTH = 45;
 
-  // Letters A-Z: 5 columns for rows 1-5, plus column 6 with space bar (rows 1-4) and Z (row 5)
-  // Structure: each row has 5 letters, plus a 6th position for space bar or Z
+  // Letters A-Z: 5 columns for rows 1-5, plus column 6 with space bar (rows 1-3) and Z (row 5)
   const LETTERS = [
     ['A', 'B', 'C', 'D', 'E', ' '],    // Row 1: space bar placeholder
     ['F', 'G', 'H', 'I', 'J', ' '],    // Row 2: space bar placeholder
@@ -34,9 +33,9 @@ const StencilBoard = ({ onLetterSelected }) => {
   const windowWidth = Dimensions.get('window').width;
   const windowHeight = Dimensions.get('window').height;
 
-  // Board dimensions
+  // Board dimensions - expand to fill available space
   const boardWidth = windowWidth - 30;
-  const boardHeight = windowHeight * 0.65;
+  const boardHeight = windowHeight - 130; // Reduced to account for smaller bottom bar
 
   // Handle board layout measurement
   const handleBoardLayout = (event) => {
@@ -44,7 +43,6 @@ const StencilBoard = ({ onLetterSelected }) => {
   };
 
   // Calculate letter tile dimensions
-  // We need to account for 5 main columns + 1 space bar column
   const letterWidth = (boardWidth - BOARD_PADDING * 2 - (GRID_GAP * 6)) / (COLUMNS + 1);
   const letterHeight = (boardHeight - BOARD_PADDING * 2 - (GRID_GAP * (ROWS - 1))) / ROWS;
 
@@ -235,6 +233,14 @@ const StencilBoard = ({ onLetterSelected }) => {
           height: boardHeight,
         },
       ]}
+      style={[
+        styles.board,
+        {
+          width: boardWidth,
+          height: boardHeight,
+          borderColor: letterColor,
+        },
+      ]}
       {...panResponder.panHandlers}
     >
       {/* Letter grid in absolute positioning */}
@@ -271,7 +277,7 @@ const StencilBoard = ({ onLetterSelected }) => {
                   styles.letterMagnified,
               ]}
             >
-              <Text style={styles.letterText}>{letter}</Text>
+              <Text style={[styles.letterText, { color: letterColor }]}>{letter}</Text>
             </View>
           );
         })
@@ -287,6 +293,7 @@ const StencilBoard = ({ onLetterSelected }) => {
             top: BOARD_PADDING,
             width: letterWidth / 2,
             height: letterHeight * 3 + GRID_GAP * 2,
+            backgroundColor: letterColor,
           },
         ]}
       />
@@ -313,7 +320,7 @@ const styles = StyleSheet.create({
   board: {
     backgroundColor: '#2a2a2a',
     borderWidth: 8,
-    borderColor: '#FFD700',
+    borderColor: '#FFD700', // Will be overridden by inline style
     borderRadius: 25,
     position: 'relative',
     overflow: 'hidden',
@@ -324,9 +331,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   letterText: {
-    fontSize: 72,
+    fontSize: 90,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: '#FFD700', // Will be overridden by inline style
   },
   letterMagnified: {
     zIndex: 5,

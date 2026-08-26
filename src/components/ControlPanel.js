@@ -1,118 +1,267 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Modal,
+  ScrollView,
   Dimensions,
 } from 'react-native';
 
 const ControlPanel = ({
   selectedLetters,
   wordHistory,
-  historyExpanded,
   onRemoveLast,
   onStoreWord,
   onDeleteWord,
-  onToggleHistory,
+  letterColor,
+  onLetterColorChange,
 }) => {
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(null);
+  const [highlightTimer, setHighlightTimer] = useState(null);
   const word = selectedLetters.join('');
+
+  const AVAILABLE_COLORS = [
+    { hex: '#FFD700', name: 'Gold (Default)' },
+    { hex: '#FF0000', name: 'Red' },
+    { hex: '#00FF00', name: 'Green' },
+    { hex: '#0000FF', name: 'Blue' },
+    { hex: '#FF1493', name: 'Pink' },
+    { hex: '#4ECDC4', name: 'Teal' },
+    { hex: '#DFE6E9', name: 'Grey' },
+    { hex: '#FFFFFF', name: 'White' },
+  ];
+
+  // Auto-highlight new letter and auto-unhighlight after 10 seconds
+  useEffect(() => {
+    if (selectedLetters.length > 0) {
+      // Always highlight the last letter when a new one is added
+      setHighlightedIndex(selectedLetters.length - 1);
+
+      // Clear existing timer
+      if (highlightTimer) clearTimeout(highlightTimer);
+
+      // Set new timer to auto-unhighlight
+      const timer = setTimeout(() => {
+        setHighlightedIndex(null);
+      }, 10000);
+
+      setHighlightTimer(timer);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedLetters.length]); // Only depend on length change
+
+  const handleLetterPress = (index) => {
+    if (highlightedIndex === index) {
+      // Delete this letter if it's highlighted
+      onRemoveLast(index);
+      setHighlightedIndex(null);
+    } else {
+      // Highlight this letter
+      setHighlightedIndex(index);
+
+      // Clear existing timer and set new one
+      if (highlightTimer) clearTimeout(highlightTimer);
+      const timer = setTimeout(() => {
+        setHighlightedIndex(null);
+      }, 10000);
+      setHighlightTimer(timer);
+    }
+  };
+
+  const handleSettingsOpen = () => {
+    setHistoryVisible(false);
+    setSettingsVisible(true);
+  };
+
+  // Debug: Log character codes for special symbols
+  React.useEffect(() => {
+    console.log('Special Characters Debug:');
+    console.log('Delete X: charCode =', '?'.charCodeAt(0), 'codePoint =', '?'.codePointAt(0).toString(16));
+    console.log('Checkmark: charCode =', '?'.charCodeAt(0), 'codePoint =', '?'.codePointAt(0).toString(16));
+  }, []);
 
   return (
     <>
-      <View style={styles.container}>
-        {/* SPELLED WORD PANEL */}
-        <View style={styles.controlPanel}>
-          <Text style={styles.label}>SPELLED</Text>
-          <View style={styles.contentBox}>
-            <Text style={styles.wordDisplay}>{word || '—'}</Text>
-          </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.button, styles.removeButton, selectedLetters.length === 0 && styles.disabled]}
-              onPress={onRemoveLast}
-              disabled={selectedLetters.length === 0}
-            >
-              <Text style={styles.buttonText}>? Remove Letter</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.submitButton, selectedLetters.length === 0 && styles.disabled]}
-              onPress={onStoreWord}
-              disabled={selectedLetters.length === 0}
-            >
-              <Text style={styles.buttonText}>? Store Word</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* WORD HISTORY PANEL */}
-        <View style={styles.controlPanel}>
-          <Text style={styles.label}>WORD HISTORY</Text>
-          <TouchableOpacity
-            style={styles.contentBox}
-            onPress={onToggleHistory}
-            activeOpacity={0.7}
-          >
-            {wordHistory.length === 0 ? (
-              <Text style={styles.emptyText}>No words stored yet</Text>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.historyScroll}>
-                <View style={styles.historyItemsContainer}>
-                  {wordHistory.map((word, index) => (
-                    <View key={`${word}-${index}`} style={styles.historyBubble}>
-                      <Text style={styles.historyWord}>{word}</Text>
+      {/* SPELLED WORD INPUT & BUTTONS ROW */}
+      <View style={styles.bottomContainer}>
+        <View style={styles.spelledContainer}>
+          <View style={[styles.spelledBox, { borderColor: letterColor }]}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.lettersScroll}>
+                <View style={styles.lettersContainer}>
+                  {selectedLetters.length === 0 ? (
+                    <Text style={[styles.placeholderText, { color: letterColor }]}>—</Text>
+                  ) : (
+                    selectedLetters.map((letter, index) => (
                       <TouchableOpacity
-                        style={styles.deleteBtn}
-                        onPress={() => onDeleteWord(index)}
+                        key={index}
+                        style={[
+                          styles.letterBubble,
+                          highlightedIndex === index && styles.letterBubbleHighlighted,
+                          { borderColor: letterColor },
+                          highlightedIndex === index && { backgroundColor: letterColor },
+                        ]}
+                        onPress={() => handleLetterPress(index)}
                       >
-                        <Text style={styles.deleteBtnText}>×</Text>
+                        <Text style={[
+                          styles.bubbleLetter, 
+                          { color: letterColor },
+                          highlightedIndex === index && { color: '#1a1a1a' }
+                        ]}>
+                          {letter}
+                        </Text>
+                        {highlightedIndex === index && (
+                          <View style={styles.deleteX}>
+                            <Text style={styles.deleteXText}>{String.fromCharCode(0x2715)}</Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
-                    </View>
-                  ))}
+                    ))
+                  )}
                 </View>
               </ScrollView>
-            )}
+            </View>
+
+          {/* STORE BUTTON */}
+          <TouchableOpacity
+            style={[
+              styles.storeButton,
+              selectedLetters.length === 0 && styles.storeButtonDisabled,
+              { backgroundColor: letterColor },
+            ]}
+            onPress={onStoreWord}
+            disabled={selectedLetters.length === 0}
+          >
+            <Text style={styles.storeButtonText}>Store</Text>
+          </TouchableOpacity>
+
+          {/* HISTORY/SETTINGS BUTTON */}
+          <TouchableOpacity
+            style={[styles.historyButton, { backgroundColor: letterColor }]}
+            onPress={() => setHistoryVisible(true)}
+          >
+            <Text style={styles.historyButtonText}>History</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* HISTORY MODAL */}
+      {/* HISTORY/SETTINGS MODAL */}
       <Modal
-        visible={historyExpanded}
+        visible={historyVisible}
         transparent={true}
-        animationType="fade"
-        onRequestClose={onToggleHistory}
+        animationType="slide"
+        onRequestClose={() => setHistoryVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={onToggleHistory}
-            >
-              <Text style={styles.modalCloseText}>×</Text>
-            </TouchableOpacity>
+          <View style={styles.modalContainer}>
+            {/* CLOSE BUTTON */}
+            <View style={[styles.modalHeader, { borderBottomColor: letterColor }]}>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setHistoryVisible(false)}
+              >
+                <Text style={[styles.closeButtonText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: letterColor }]}>Word History</Text>
+              <TouchableOpacity
+                style={styles.settingsLink}
+                onPress={handleSettingsOpen}
+              >
+                <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.modalTitle}>Word History</Text>
+            {/* HISTORY LIST */}
+            <ScrollView style={styles.historyList}>
+              {wordHistory.length === 0 ? (
+                <View style={styles.emptyHistoryContainer}>
+                  <Text style={[styles.emptyHistoryText, { color: letterColor }]}>No words stored yet</Text>
+                </View>
+              ) : (
+                <View>
+                  {wordHistory.map((entry, dateIndex) => (
+                    <View key={dateIndex} style={[styles.historyEntry, { borderLeftColor: letterColor }]}>
+                      <View style={styles.historyDateRow}>
+                        <Text style={[styles.historyDate, { color: letterColor }]}>{entry.date}</Text>
+                      </View>
+                      {entry.words.map((word, wordIndex) => (
+                        <View key={wordIndex} style={styles.historyWordRow}>
+                          <Text style={[styles.historyWord, { color: letterColor }]}>{word}</Text>
+                          <TouchableOpacity
+                            onPress={() => onDeleteWord(dateIndex, wordIndex)}
+                          >
+                            <Text style={styles.historyDeleteBtn}>{String.fromCharCode(0x2715)}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
-            {wordHistory.length === 0 ? (
-              <Text style={styles.modalEmptyText}>No words stored yet</Text>
-            ) : (
-              <ScrollView style={styles.historyList}>
-                {wordHistory.map((word, index) => (
-                  <View key={`${word}-${index}`} style={styles.historyEntry}>
-                    <Text style={styles.historyEntryWord}>{word}</Text>
-                    <TouchableOpacity
-                      style={styles.historyEntryDeleteBtn}
-                      onPress={() => onDeleteWord(index)}
-                    >
-                      <Text style={styles.historyEntryDeleteText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
+      {/* SETTINGS MODAL */}
+      <Modal
+        visible={settingsVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <View style={styles.settingsOverlay}>
+          <View style={styles.settingsContainer}>
+            <View style={[styles.settingsHeader, { borderBottomColor: letterColor }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  setSettingsVisible(false);
+                }}
+              >
+                <Text style={[styles.closeButtonText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
+              </TouchableOpacity>
+              <Text style={[styles.settingsTitle, { color: letterColor }]}>Letterboard Colour</Text>
+              <View style={{ width: 40 }} />
+            </View>
+
+            <ScrollView style={styles.colorGrid}>
+              {/* Current color display */}
+              <View style={[styles.currentColorDisplay, { borderColor: letterColor }]}>
+                <View style={[styles.currentColorBox, { backgroundColor: letterColor }]} />
+                <Text style={[styles.currentColorText, { color: letterColor }]}>
+                  {AVAILABLE_COLORS.find(c => c.hex === letterColor)?.name || 'Custom'}
+                </Text>
+              </View>
+
+              {/* Color options as dropdown list */}
+              <View style={styles.colorDropdown}>
+                {AVAILABLE_COLORS.map((colorOption) => (
+                  <TouchableOpacity
+                    key={colorOption.hex}
+                    style={[
+                      styles.colorDropdownOption,
+                      { borderBottomColor: letterColor },
+                      letterColor === colorOption.hex && { backgroundColor: colorOption.hex + '20' },
+                    ]}
+                    onPress={() => {
+                      onLetterColorChange(colorOption.hex);
+                      setSettingsVisible(false);
+                    }}
+                  >
+                    <View style={[styles.colorDropdownBox, { backgroundColor: colorOption.hex }]} />
+                    <Text style={[styles.colorDropdownText, { color: letterColor }]}>
+                      {colorOption.name}
+                    </Text>
+                    {letterColor === colorOption.hex && (
+                      <Text style={[styles.colorDropdownCheckmark, { color: letterColor }]}>{String.fromCharCode(0x2713)}</Text>
+                    )}
+                  </TouchableOpacity>
                 ))}
-              </ScrollView>
-            )}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -121,191 +270,304 @@ const ControlPanel = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
+  bottomContainer: {
+    backgroundColor: '#1a1a1a',
+  },
+  spelledContainer: {
     flexDirection: 'row',
-    backgroundColor: '#222',
-    borderTopWidth: 0,
-    padding: 15,
-    gap: 15,
-    flex: 0,
-    minHeight: 220,
-  },
-  controlPanel: {
-    flex: 1,
-    gap: 8,
-  },
-  label: {
-    fontSize: 10,
-    color: '#FFD700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    fontWeight: 'bold',
-  },
-  contentBox: {
-    backgroundColor: '#333',
-    borderWidth: 3,
-    borderColor: '#FFD700',
-    borderRadius: 12,
-    padding: 15,
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 100,
-  },
-  wordDisplay: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FFD700',
-    letterSpacing: 8,
-    textAlign: 'center',
-  },
-  historyScroll: {
-    flexGrow: 1,
-  },
-  historyItemsContainer: {
-    flexDirection: 'row',
+    paddingHorizontal: 15,
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    backgroundColor: '#1a1a1a',
     gap: 8,
     alignItems: 'center',
   },
-  historyBubble: {
+  spelledBox: {
+    flex: 1,
+    height: 50,
+    backgroundColor: '#333',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    justifyContent: 'center',
+  },
+  lettersScroll: {
+    height: '100%',
+  },
+  lettersContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  placeholderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  letterBubble: {
     backgroundColor: '#444',
+    borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  historyWord: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFD700',
-    letterSpacing: 2,
-  },
-  deleteBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FF5252',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteBtnText: {
-    color: 'white',
+  letterBubbleHighlighted: {
+    borderColor: '#fff',
+  },
+  bubbleLetter: {
     fontSize: 16,
+    color: '#FFD700',
     fontWeight: 'bold',
   },
-  emptyText: {
-    color: '#666',
-    fontSize: 14,
+  deleteX: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 20,
+    height: 20,
+    backgroundColor: '#FF5252',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 10,
+  deleteXText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
-  button: {
-    flex: 1,
+  storeButton: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingHorizontal: 10,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    height: 50,
+    minWidth: 60,
   },
-  removeButton: {
-    backgroundColor: '#FF9800',
-  },
-  submitButton: {
-    backgroundColor: '#4CAF50',
-  },
-  disabled: {
+  storeButtonDisabled: {
+    backgroundColor: '#666',
     opacity: 0.5,
   },
-  buttonText: {
-    fontSize: 13,
+  storeButtonText: {
+    color: '#1a1a1a',
     fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
+    fontSize: 14,
   },
-
-  // Modal styles
+  historyButton: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50,
+  },
+  historyButtonText: {
+    color: '#1a1a1a',
+    fontWeight: 'bold',
+    fontSize: 11,
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    paddingTop: 40,
   },
-  modalContent: {
-    backgroundColor: '#333',
-    borderWidth: 4,
-    borderColor: '#FFD700',
-    borderRadius: 20,
-    padding: 30,
-    width: '90%',
-    maxHeight: '90%',
-  },
-  modalClose: {
-    position: 'absolute',
-    top: 15,
-    right: 15,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFD700',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  modalCloseText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  modalTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFD700',
-    textAlign: 'center',
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    marginHorizontal: 20,
     marginBottom: 20,
+    overflow: 'hidden',
   },
-  historyList: {
-    gap: 12,
-  },
-  historyEntry: {
-    backgroundColor: '#444',
-    borderWidth: 2,
-    borderColor: '#FFD700',
-    borderRadius: 10,
-    padding: 16,
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: '#FFD700',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#FFD700',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalTitle: {
+    color: '#FFD700',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  settingsLink: {
+    padding: 8,
+  },
+  settingsLinkText: {
+    color: '#FFD700',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+  historyList: {
+    flex: 1,
+    padding: 15,
+  },
+  emptyHistoryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyHistoryText: {
+    color: '#FFD700',
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  historyEntry: {
+    marginBottom: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFD700',
+    paddingLeft: 15,
+  },
+  historyDateRow: {
     marginBottom: 10,
   },
-  historyEntryWord: {
+  historyDate: {
+    color: '#FFD700',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  historyWordRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  historyWord: {
+    color: '#FFD700',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  historyDeleteBtn: {
+    color: '#FF5252',
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFD700',
-    letterSpacing: 3,
+  },
+  settingsOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  historyEntryDeleteBtn: {
-    backgroundColor: '#FF5252',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  settingsContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    overflow: 'hidden',
+    maxHeight: '80%',
   },
-  historyEntryDeleteText: {
-    color: 'white',
+  settingsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: '#FFD700',
+  },
+  settingsTitle: {
+    color: '#FFD700',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 12,
   },
-  modalEmptyText: {
-    textAlign: 'center',
-    color: '#999',
+  colorGrid: {
+    padding: 20,
+  },
+  currentColorDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 20,
+  },
+  currentColorBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  currentColorText: {
+    color: '#FFD700',
     fontSize: 16,
-    marginTop: 30,
+    fontWeight: 'bold',
+  },
+  colorDropdown: {
+    backgroundColor: '#333',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  colorDropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  colorDropdownBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  colorDropdownText: {
+    flex: 1,
+    color: '#FFD700',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  colorDropdownCheckmark: {
+    color: '#FFD700',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  colorOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 15,
+    justifyContent: 'center',
+  },
+  colorOption: {
+    width: '30%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#444',
+  },
+  colorOptionSelected: {
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  colorCheckmark: {
+    color: '#1a1a1a',
+    fontSize: 28,
+    fontWeight: 'bold',
   },
 });
 
