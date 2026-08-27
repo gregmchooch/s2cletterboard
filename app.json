@@ -1,29 +1,33 @@
 {
-  "expo": {
-    "name": "FixedStencilApp",
-    "slug": "FixedStencilApp",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "expo": {
+        "name": "AlphaClick: A Tool for S2C Learners",
+        "slug": "alphaclick",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/AlphaClick-icon.png",
+        "userInterfaceStyle": "light",
+        "newArchEnabled": true,
+        "splash": {
+            "image": "./assets/AlphaClick-splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+        },
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.gregmchooch.alphaclick",
+            "buildNumber": "1"
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/AlphaClickAndroid-icon.png",
+                "backgroundColor": "#ffffff"
+            },
+            "package": "com.gregmchooch.alphaclick",
+            "versionCode": 1,
+            "edgeToEdgeEnabled": true
+        },
+        "web": {
+            "favicon": "./assets/AlphaClick-icon.png"
+        }
     }
-  }
 }
