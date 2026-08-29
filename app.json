@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/AlphaClick-Splash.png",
+      "image": "./assets/AlphaClick-Splash.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
