@@ -5,6 +5,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 import StencilBoard from './src/components/StencilBoard';
 import ControlPanel from './src/components/ControlPanel';
 
@@ -12,11 +13,45 @@ const App = () => {
   const [selectedLetters, setSelectedLetters] = useState([]);
   const [wordHistory, setWordHistory] = useState([]);
   const [letterColor, setLetterColor] = useState('#FFD700');
+  const [isPremium, setIsPremium] = useState(false);
 
-  // Load history on app start
+  // Load history and premium status on app start
   useEffect(() => {
+    initializeRevenueCat();
     loadHistory();
+    loadPremiumStatus();
   }, []);
+
+  const initializeRevenueCat = async () => {
+    try {
+      // Configure RevenueCat with your API key
+      // Production Public API Key
+      await Purchases.configure({
+        apiKey: 'appl_EhoaGGnZsBrDCiWmyTUAvEdEkbg',
+      });
+    } catch (error) {
+      console.log('Error initializing RevenueCat:', error);
+    }
+  };
+
+  const loadPremiumStatus = async () => {
+    try {
+      const premiumStored = await AsyncStorage.getItem('premiumStatus');
+      if (premiumStored === 'true') {
+        setIsPremium(true);
+      }
+    } catch (error) {
+      console.log('Error loading premium status:', error);
+    }
+  };
+
+  const savePremiumStatus = async (isPremiumUser) => {
+    try {
+      await AsyncStorage.setItem('premiumStatus', isPremiumUser ? 'true' : 'false');
+    } catch (error) {
+      console.log('Error saving premium status:', error);
+    }
+  };
 
   const loadHistory = async () => {
     try {
@@ -60,9 +95,19 @@ const App = () => {
     setSelectedLetters((prevLetters) => prevLetters.filter((_, i) => i !== index));
   };
 
-  const handleStoreWord = () => {
+  const handleStoreWord = (onShowAlert) => {
     const word = selectedLetters.join('');
     if (word.trim().length > 0) {
+      // Check if user is premium
+      if (!isPremium) {
+        // Show alert and clear input
+        if (onShowAlert) {
+          onShowAlert('Storing history can only be done when the application is in Premium mode.');
+        }
+        setSelectedLetters([]);
+        return;
+      }
+
       const today = new Date();
       const dateStr = today.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -108,6 +153,41 @@ const App = () => {
     saveLetterColor(color);
   };
 
+  const handlePremiumPurchase = async () => {
+    try {
+      const offerings = await Purchases.getOfferings();
+
+      if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
+        // Get the monthly subscription package
+        const package_ = offerings.current.availablePackages[0];
+
+        console.log('Attempting purchase of package:', package_.identifier);
+
+        const { customerInfo } = await Purchases.purchasePackage(package_);
+
+        // Check if purchase was successful by looking at active entitlements
+        const entitlements = customerInfo.entitlements.active;
+
+        console.log('Active entitlements:', Object.keys(entitlements));
+
+        // Check for any active entitlement (could be 'premium' or other names)
+        if (Object.keys(entitlements).length > 0) {
+          setIsPremium(true);
+          savePremiumStatus(true);
+          console.log('Premium access granted!');
+        }
+      } else {
+        console.log('No packages available for purchase');
+      }
+    } catch (error) {
+      console.log('Error processing premium purchase:', error);
+      // User cancelled purchase is a normal flow, not an error
+      if (error.code !== 'PURCHASE_CANCELLED') {
+        console.log('Purchase error details:', error);
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.boardContainer}>
@@ -125,6 +205,8 @@ const App = () => {
         onDeleteWord={handleDeleteWord}
         letterColor={letterColor}
         onLetterColorChange={handleLetterColorChange}
+        isPremium={isPremium}
+        onPremiumPurchase={handlePremiumPurchase}
       />
     </SafeAreaView>
   );

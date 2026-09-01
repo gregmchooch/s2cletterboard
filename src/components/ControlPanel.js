@@ -7,6 +7,7 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 
 const ControlPanel = ({
@@ -17,9 +18,12 @@ const ControlPanel = ({
   onDeleteWord,
   letterColor,
   onLetterColorChange,
+  isPremium,
+  onPremiumPurchase,
 }) => {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(null);
   const [highlightTimer, setHighlightTimer] = useState(null);
   const word = selectedLetters.join('');
@@ -132,18 +136,30 @@ const ControlPanel = ({
               selectedLetters.length === 0 && styles.storeButtonDisabled,
               { backgroundColor: letterColor },
             ]}
-            onPress={onStoreWord}
+            onPress={() => onStoreWord((message) => {
+              Alert.alert('Premium Feature Required', message, [
+                { text: 'OK', onPress: () => {} }
+              ]);
+            })}
             disabled={selectedLetters.length === 0}
           >
             <Text style={styles.storeButtonText}>Store</Text>
           </TouchableOpacity>
 
-          {/* HISTORY/SETTINGS BUTTON */}
+          {/* HISTORY/PREMIUM BUTTON */}
           <TouchableOpacity
             style={[styles.historyButton, { backgroundColor: letterColor }]}
-            onPress={() => setHistoryVisible(true)}
+            onPress={() => {
+              if (isPremium) {
+                setHistoryVisible(true);
+              } else {
+                setPremiumModalVisible(true);
+              }
+            }}
           >
-            <Text style={styles.historyButtonText}>History</Text>
+            <Text style={styles.historyButtonText}>
+              {isPremium ? 'History' : 'Premium'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -166,12 +182,15 @@ const ControlPanel = ({
                 <Text style={[styles.closeButtonText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: letterColor }]}>Word History</Text>
-              <TouchableOpacity
-                style={styles.settingsLink}
-                onPress={handleSettingsOpen}
-              >
-                <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
-              </TouchableOpacity>
+              {isPremium && (
+                <TouchableOpacity
+                  style={styles.settingsLink}
+                  onPress={handleSettingsOpen}
+                >
+                  <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
+                </TouchableOpacity>
+              )}
+              {!isPremium && <View style={{ width: 40 }} />}
             </View>
 
             {/* HISTORY LIST */}
@@ -262,6 +281,44 @@ const ControlPanel = ({
                 ))}
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PREMIUM MODAL */}
+      <Modal
+        visible={premiumModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPremiumModalVisible(false)}
+      >
+        <View style={styles.premiumOverlay}>
+          <View style={styles.premiumContainer}>
+            <TouchableOpacity
+              style={styles.premiumCloseButton}
+              onPress={() => setPremiumModalVisible(false)}
+            >
+              <Text style={[styles.premiumCloseText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.premiumTitle, { color: letterColor }]}>AlphaClick Premium</Text>
+
+            <ScrollView style={styles.premiumContent}>
+              <Text style={[styles.premiumMessage, { color: letterColor }]}>
+                Hope you are enjoying AlphaClick and I hope it can assist with your S2C communication journey. {'\n\n'}
+                If you want to show appreciation for the Developer you can click to provide a one-off contribution. As a thank you this will also open up Stored History and Customizations in the application.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.premiumDonateButton, { backgroundColor: letterColor }]}
+              onPress={async () => {
+                await onPremiumPurchase();
+                setPremiumModalVisible(false);
+              }}
+            >
+              <Text style={styles.premiumDonateText}>Donate and Enable Premium Features - $4.99</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -568,6 +625,55 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     fontSize: 28,
     fontWeight: 'bold',
+  },
+  premiumOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  premiumContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    padding: 20,
+    maxHeight: '80%',
+    width: '100%',
+  },
+  premiumCloseButton: {
+    alignSelf: 'flex-end',
+    marginBottom: 15,
+  },
+  premiumCloseText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  premiumTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  premiumContent: {
+    marginBottom: 20,
+  },
+  premiumMessage: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  premiumDonateButton: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumDonateText: {
+    color: '#1a1a1a',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
