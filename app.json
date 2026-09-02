@@ -16,9 +16,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.gregmchooch.alphaclick",
       "buildNumber": "1",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "infoPlist": {
+            "ITSAppUsesNonExemptEncryption": false,
+            "UIDeviceFamily": [ 2 ]
+        }
     },
     "android": {
       "adaptiveIcon": {
