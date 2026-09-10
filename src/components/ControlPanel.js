@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
   Dimensions,
-  Alert,
 } from 'react-native';
 
 const ControlPanel = ({
@@ -136,30 +135,18 @@ const ControlPanel = ({
               selectedLetters.length === 0 && styles.storeButtonDisabled,
               { backgroundColor: letterColor },
             ]}
-            onPress={() => onStoreWord((message) => {
-              Alert.alert('Premium Feature Required', message, [
-                { text: 'OK', onPress: () => {} }
-              ]);
-            })}
+            onPress={() => onStoreWord()}
             disabled={selectedLetters.length === 0}
           >
             <Text style={styles.storeButtonText}>Store</Text>
           </TouchableOpacity>
 
-          {/* HISTORY/PREMIUM BUTTON */}
+          {/* HISTORY BUTTON */}
           <TouchableOpacity
             style={[styles.historyButton, { backgroundColor: letterColor }]}
-            onPress={() => {
-              if (isPremium) {
-                setHistoryVisible(true);
-              } else {
-                setPremiumModalVisible(true);
-              }
-            }}
+            onPress={() => setHistoryVisible(true)}
           >
-            <Text style={styles.historyButtonText}>
-              {isPremium ? 'History' : 'Premium'}
-            </Text>
+            <Text style={styles.historyButtonText}>History</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -182,15 +169,21 @@ const ControlPanel = ({
                 <Text style={[styles.closeButtonText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: letterColor }]}>Word History</Text>
-              {isPremium && (
+              {isPremium ? (
                 <TouchableOpacity
                   style={styles.settingsLink}
                   onPress={handleSettingsOpen}
                 >
                   <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
                 </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.settingsLink}
+                  onPress={() => setPremiumModalVisible(true)}
+                >
+                  <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
+                </TouchableOpacity>
               )}
-              {!isPremium && <View style={{ width: 40 }} />}
             </View>
 
             {/* HISTORY LIST */}

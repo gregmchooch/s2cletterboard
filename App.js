@@ -95,19 +95,9 @@ const App = () => {
     setSelectedLetters((prevLetters) => prevLetters.filter((_, i) => i !== index));
   };
 
-  const handleStoreWord = (onShowAlert) => {
+  const handleStoreWord = () => {
     const word = selectedLetters.join('');
     if (word.trim().length > 0) {
-      // Check if user is premium
-      if (!isPremium) {
-        // Show alert and clear input
-        if (onShowAlert) {
-          onShowAlert('Storing history can only be done when the application is in Premium mode.');
-        }
-        setSelectedLetters([]);
-        return;
-      }
-
       const today = new Date();
       const dateStr = today.toLocaleDateString('en-US', {
         year: 'numeric',
