@@ -169,21 +169,20 @@ const ControlPanel = ({
                 <Text style={[styles.closeButtonText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: letterColor }]}>Word History</Text>
-              {isPremium ? (
+              <View style={styles.headerActions}>
                 <TouchableOpacity
                   style={styles.settingsLink}
                   onPress={handleSettingsOpen}
                 >
                   <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
                 </TouchableOpacity>
-              ) : (
                 <TouchableOpacity
                   style={styles.settingsLink}
                   onPress={() => setPremiumModalVisible(true)}
                 >
-                  <Text style={[styles.settingsLinkText, { color: letterColor }]}>Settings</Text>
+                  <Text style={[styles.settingsLinkText, { color: letterColor }]}>Donate</Text>
                 </TouchableOpacity>
-              )}
+              </View>
             </View>
 
             {/* HISTORY LIST */}
@@ -294,12 +293,11 @@ const ControlPanel = ({
               <Text style={[styles.premiumCloseText, { color: letterColor }]}>{String.fromCharCode(0x2715)}</Text>
             </TouchableOpacity>
 
-            <Text style={[styles.premiumTitle, { color: letterColor }]}>AlphaClick Premium</Text>
+            <Text style={[styles.premiumTitle, { color: letterColor }]}>Support AlphaClick</Text>
 
             <ScrollView style={styles.premiumContent}>
               <Text style={[styles.premiumMessage, { color: letterColor }]}>
-                Hope you are enjoying AlphaClick and I hope it can assist with your S2C communication journey. {'\n\n'}
-                If you want to show appreciation for the Developer you can click to provide a one-off contribution. As a thank you this will also open up Stored History and Customizations in the application.
+                This application is free for use however should you want to show your appreciation for the developer's effort you can donate a small contribution of your thanks.
               </Text>
             </ScrollView>
 
@@ -310,7 +308,7 @@ const ControlPanel = ({
                 setPremiumModalVisible(false);
               }}
             >
-              <Text style={styles.premiumDonateText}>Donate and Enable Premium Features - $4.99</Text>
+              <Text style={styles.premiumDonateText}>Donate - $4.99</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -455,6 +453,10 @@ const styles = StyleSheet.create({
   },
   settingsLink: {
     padding: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   settingsLinkText: {
     color: '#FFD700',

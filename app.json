@@ -3,7 +3,7 @@
     "name": "AlphaClick: A Tool for S2C Learners",
     "slug": "alphaclick",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icon": "./assets/AlphaClickCompliant-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -28,7 +28,8 @@
       },
       "package": "com.gregmchooch.alphaclick",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "orientation": "landscape"
     },
     "web": {
       "favicon": "./assets/AlphaClick-icon.png"

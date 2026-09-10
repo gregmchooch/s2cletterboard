@@ -46,6 +46,9 @@ const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
   const letterWidth = (boardWidth - BOARD_PADDING * 2 - (GRID_GAP * 6)) / (COLUMNS + 1);
   const letterHeight = (boardHeight - BOARD_PADDING * 2 - (GRID_GAP * (ROWS - 1))) / ROWS;
 
+  // Responsive font size based on tile size (scales for iPhone vs iPad)
+  const letterFontSize = Math.max(20, Math.min(letterWidth, letterHeight) * 0.55);
+
   // Get letter position by grid coordinates (relative to board)
   const getLetterPosition = (row, col) => {
     const x = BOARD_PADDING + col * (letterWidth + GRID_GAP);
@@ -231,13 +234,6 @@ const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
         {
           width: boardWidth,
           height: boardHeight,
-        },
-      ]}
-      style={[
-        styles.board,
-        {
-          width: boardWidth,
-          height: boardHeight,
           borderColor: letterColor,
         },
       ]}
@@ -277,7 +273,7 @@ const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
                   styles.letterMagnified,
               ]}
             >
-              <Text style={[styles.letterText, { color: letterColor }]}>{letter}</Text>
+              <Text style={[styles.letterText, { color: letterColor, fontSize: letterFontSize }]}>{letter}</Text>
             </View>
           );
         })
