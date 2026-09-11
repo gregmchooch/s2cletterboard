@@ -143,15 +143,23 @@ const App = () => {
     saveLetterColor(color);
   };
 
-  const handlePremiumPurchase = async () => {
+  const handlePremiumPurchase = async (amount) => {
     try {
       const offerings = await Purchases.getOfferings();
 
       if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
-        // Get the monthly subscription package
-        const package_ = offerings.current.availablePackages[0];
+        const availablePackages = offerings.current.availablePackages;
 
-        console.log('Attempting purchase of package:', package_.identifier);
+        // Try to match a package configured for this specific donation amount
+        // (e.g. package/product identifier containing "5", "10", "20", "100")
+        const package_ =
+          availablePackages.find((pkg) =>
+            pkg.identifier.toLowerCase().includes(`donate_${amount}`) ||
+            pkg.identifier.toLowerCase().includes(`_${amount}`) ||
+            pkg.product?.identifier?.toLowerCase().includes(`_${amount}`)
+          ) || availablePackages[0];
+
+        console.log(`Attempting purchase of $${amount} package:`, package_.identifier);
 
         const { customerInfo } = await Purchases.purchasePackage(package_);
 
@@ -164,13 +172,13 @@ const App = () => {
         if (Object.keys(entitlements).length > 0) {
           setIsPremium(true);
           savePremiumStatus(true);
-          console.log('Premium access granted!');
+          console.log('Thank you for your donation!');
         }
       } else {
         console.log('No packages available for purchase');
       }
     } catch (error) {
-      console.log('Error processing premium purchase:', error);
+      console.log('Error processing donation:', error);
       // User cancelled purchase is a normal flow, not an error
       if (error.code !== 'PURCHASE_CANCELLED') {
         console.log('Purchase error details:', error);

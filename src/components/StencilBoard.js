@@ -5,6 +5,7 @@ import {
   StyleSheet,
   PanResponder,
   Dimensions,
+  Platform,
 } from 'react-native';
 
 const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
@@ -12,10 +13,18 @@ const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
   const [magnifiedLetters, setMagnifiedLetters] = useState(new Set());
   const boardRef = useRef(null);
 
+  // Detect iPhone vs iPad (landscape) based on the shorter screen dimension
+  const screenMinDimension = Math.min(
+    Dimensions.get('window').width,
+    Dimensions.get('window').height
+  );
+  const isPhone = Platform.OS !== 'web' && screenMinDimension < 600;
+
   // Constants for layout
-  const MAGNIFY_RADIUS = 80;
-  const MAGNIFY_SCALE = 2.0;
+  const MAGNIFY_RADIUS = isPhone ? 40 : 80;
+  const MAGNIFY_SCALE = isPhone ? 1.6 : 2.0;
   const BOARD_PADDING = 6;
+  const BOARD_PADDING_BOTTOM = 20;
   const GRID_GAP = 4;
   const COLUMNS = 5;
   const ROWS = 5;
@@ -35,16 +44,16 @@ const StencilBoard = ({ onLetterSelected, letterColor = '#FFD700' }) => {
 
   // Board dimensions - expand to fill available space
   const boardWidth = windowWidth - 30;
-  const boardHeight = windowHeight - 130; // Reduced to account for smaller bottom bar
+  const boardHeight = windowHeight - 120; // Reduced to account for smaller bottom bar
 
   // Handle board layout measurement
   const handleBoardLayout = (event) => {
     // Layout is captured but not needed for current implementation
   };
 
-  // Calculate letter tile dimensions
+  // Calculate letter tile dimensions (extra bottom padding keeps the last row clear of the border)
   const letterWidth = (boardWidth - BOARD_PADDING * 2 - (GRID_GAP * 6)) / (COLUMNS + 1);
-  const letterHeight = (boardHeight - BOARD_PADDING * 2 - (GRID_GAP * (ROWS - 1))) / ROWS;
+  const letterHeight = (boardHeight - BOARD_PADDING - BOARD_PADDING_BOTTOM - (GRID_GAP * (ROWS - 1))) / ROWS;
 
   // Responsive font size based on tile size (scales for iPhone vs iPad)
   const letterFontSize = Math.max(20, Math.min(letterWidth, letterHeight) * 0.55);

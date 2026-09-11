@@ -18,7 +18,15 @@
       "buildNumber": "1",
         "infoPlist": {
             "ITSAppUsesNonExemptEncryption": false,
-            "UIDeviceFamily": [ 2 ]
+            "UIDeviceFamily": [ 1, 2 ],
+            "UISupportedInterfaceOrientations": [
+                "UIInterfaceOrientationLandscapeLeft",
+                "UIInterfaceOrientationLandscapeRight"
+            ],
+            "UISupportedInterfaceOrientations~ipad": [
+                "UIInterfaceOrientationLandscapeLeft",
+                "UIInterfaceOrientationLandscapeRight"
+            ]
         }
     },
     "android": {
