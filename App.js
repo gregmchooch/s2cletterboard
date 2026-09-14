@@ -177,13 +177,15 @@ const App = () => {
 
       const availablePackages = offerings.current.availablePackages;
 
-      // Try to match a package configured for this specific donation amount
-      // (e.g. package/product identifier containing "5", "10", "20", "100")
+      // Match the package configured for this specific donation amount.
+      // Uses a whole-number boundary check (via regex) so "10" never matches
+      // inside "100" (a plain substring "includes" check would incorrectly
+      // match "donate_100" when looking for "_10").
+      const amountPattern = new RegExp(`(^|[^0-9])${amount}([^0-9]|$)`);
       const pkg =
         availablePackages.find((p) =>
-          p.identifier.toLowerCase().includes(`donate_${amount}`) ||
-          p.identifier.toLowerCase().includes(`_${amount}`) ||
-          p.product?.identifier?.toLowerCase().includes(`_${amount}`)
+          amountPattern.test(p.identifier.toLowerCase()) ||
+          amountPattern.test(p.product?.identifier?.toLowerCase() ?? '')
         ) || availablePackages[0];
 
       const { customerInfo } = await Purchases.purchasePackage(pkg);
@@ -192,7 +194,7 @@ const App = () => {
       if (customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] !== undefined) {
         setIsPremium(true);
         savePremiumStatus(true);
-        Alert.alert('Success!', 'Thank you for your generous donation! AlphaClick Premium features are now active.');
+        Alert.alert('Thank You!', 'Thank you for your generous donation!');
       }
     } catch (error) {
       if (!error.userCancelled) {
