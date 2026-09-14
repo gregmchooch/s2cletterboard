@@ -42,6 +42,16 @@
     "web": {
       "favicon": "./assets/AlphaClick-icon.png"
     },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/AlphaClick-Splash.jpg",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "37d79619-dbc3-469f-ac49-d718c5ffd64b"

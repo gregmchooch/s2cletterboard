@@ -3,11 +3,23 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
+import * as SplashScreen from 'expo-splash-screen';
 import StencilBoard from './src/components/StencilBoard';
 import ControlPanel from './src/components/ControlPanel';
+
+// Must match the entitlement identifier configured in the RevenueCat dashboard
+const PREMIUM_ENTITLEMENT_ID = 'alphaclick_premium';
+
+// Keep the native splash screen visible until we explicitly hide it below
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Extra time (ms) to keep the splash screen visible after the app is ready,
+// so it doesn't disappear too quickly.
+const SPLASH_EXTRA_DELAY = 1000;
 
 const App = () => {
   const [selectedLetters, setSelectedLetters] = useState([]);
@@ -17,9 +29,20 @@ const App = () => {
 
   // Load history and premium status on app start
   useEffect(() => {
-    initializeRevenueCat();
-    loadHistory();
-    loadPremiumStatus();
+    const prepare = async () => {
+      await Promise.all([
+        initializeRevenueCat(),
+        loadHistory(),
+        loadPremiumStatus(),
+      ]);
+
+      // Keep splash screen up a little longer so it doesn't flash away too fast
+      setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => {});
+      }, SPLASH_EXTRA_DELAY);
+    };
+
+    prepare();
   }, []);
 
   const initializeRevenueCat = async () => {
@@ -147,41 +170,33 @@ const App = () => {
     try {
       const offerings = await Purchases.getOfferings();
 
-      if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
-        const availablePackages = offerings.current.availablePackages;
+      if (offerings.current === null || offerings.current.availablePackages.length === 0) {
+        Alert.alert('Unavailable', 'Donation options are not available right now. Please try again later.');
+        return;
+      }
 
-        // Try to match a package configured for this specific donation amount
-        // (e.g. package/product identifier containing "5", "10", "20", "100")
-        const package_ =
-          availablePackages.find((pkg) =>
-            pkg.identifier.toLowerCase().includes(`donate_${amount}`) ||
-            pkg.identifier.toLowerCase().includes(`_${amount}`) ||
-            pkg.product?.identifier?.toLowerCase().includes(`_${amount}`)
-          ) || availablePackages[0];
+      const availablePackages = offerings.current.availablePackages;
 
-        console.log(`Attempting purchase of $${amount} package:`, package_.identifier);
+      // Try to match a package configured for this specific donation amount
+      // (e.g. package/product identifier containing "5", "10", "20", "100")
+      const pkg =
+        availablePackages.find((p) =>
+          p.identifier.toLowerCase().includes(`donate_${amount}`) ||
+          p.identifier.toLowerCase().includes(`_${amount}`) ||
+          p.product?.identifier?.toLowerCase().includes(`_${amount}`)
+        ) || availablePackages[0];
 
-        const { customerInfo } = await Purchases.purchasePackage(package_);
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
 
-        // Check if purchase was successful by looking at active entitlements
-        const entitlements = customerInfo.entitlements.active;
-
-        console.log('Active entitlements:', Object.keys(entitlements));
-
-        // Check for any active entitlement (could be 'premium' or other names)
-        if (Object.keys(entitlements).length > 0) {
-          setIsPremium(true);
-          savePremiumStatus(true);
-          console.log('Thank you for your donation!');
-        }
-      } else {
-        console.log('No packages available for purchase');
+      // Confirm your specific entitlement identifier matches your dashboard tag
+      if (customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] !== undefined) {
+        setIsPremium(true);
+        savePremiumStatus(true);
+        Alert.alert('Success!', 'Thank you for your generous donation! AlphaClick Premium features are now active.');
       }
     } catch (error) {
-      console.log('Error processing donation:', error);
-      // User cancelled purchase is a normal flow, not an error
-      if (error.code !== 'PURCHASE_CANCELLED') {
-        console.log('Purchase error details:', error);
+      if (!error.userCancelled) {
+        Alert.alert('Transaction Failed', error.message);
       }
     }
   };
