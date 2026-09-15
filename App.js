@@ -14,6 +14,15 @@ import ControlPanel from './src/components/ControlPanel';
 // Must match the entitlement identifier configured in the RevenueCat dashboard
 const PREMIUM_ENTITLEMENT_ID = 'alphaclick_premium';
 
+// Exact product identifiers for each donation amount, as configured in
+// App Store Connect / RevenueCat. Used for direct lookup (no pattern matching).
+const DONATION_PRODUCT_IDS = {
+  5: 'alphaclick_donation_5_consummable',
+  10: 'alphaclick_donation_10_consummable',
+  20: 'alphaclick_donation_20_consummable',
+  100: 'alphaclick_donation_100_consummable',
+};
+
 // Keep the native splash screen visible until we explicitly hide it below
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -168,35 +177,56 @@ const App = () => {
 
   const handlePremiumPurchase = async (amount) => {
     try {
+      const productId = DONATION_PRODUCT_IDS[amount];
+      if (!productId) {
+        console.log('[Donate] No product ID configured for amount:', amount);
+        Alert.alert('Unavailable', 'This donation option is not available.');
+        return;
+      }
+
       const offerings = await Purchases.getOfferings();
+      console.log('[Donate] Offerings fetched:', JSON.stringify({
+        current: offerings.current?.identifier,
+        packageCount: offerings.current?.availablePackages?.length,
+      }));
 
       if (offerings.current === null || offerings.current.availablePackages.length === 0) {
+        console.log('[Donate] No current offering / packages available.');
         Alert.alert('Unavailable', 'Donation options are not available right now. Please try again later.');
         return;
       }
 
       const availablePackages = offerings.current.availablePackages;
+      console.log('[Donate] Available packages:', availablePackages.map((p) => ({
+        identifier: p.identifier,
+        productId: p.product?.identifier,
+        price: p.product?.priceString,
+      })));
 
-      // Match the package configured for this specific donation amount.
-      // Uses a whole-number boundary check (via regex) so "10" never matches
-      // inside "100" (a plain substring "includes" check would incorrectly
-      // match "donate_100" when looking for "_10").
-      const amountPattern = new RegExp(`(^|[^0-9])${amount}([^0-9]|$)`);
-      const pkg =
-        availablePackages.find((p) =>
-          amountPattern.test(p.identifier.toLowerCase()) ||
-          amountPattern.test(p.product?.identifier?.toLowerCase() ?? '')
-        ) || availablePackages[0];
+      // Exact match on the product identifier configured for this donation amount
+      const pkg = availablePackages.find((p) => p.product?.identifier === productId);
+
+      if (!pkg) {
+        console.log('[Donate] No package found for product ID:', productId);
+        Alert.alert('Unavailable', 'This donation option is not available right now. Please try again later.');
+        return;
+      }
+
+      console.log('[Donate] Selected package for amount', amount, ':', pkg.identifier, pkg.product?.identifier, pkg.product?.priceString);
 
       const { customerInfo } = await Purchases.purchasePackage(pkg);
+      console.log('[Donate] Purchase completed. Active entitlements:', Object.keys(customerInfo.entitlements.active));
 
       // Confirm your specific entitlement identifier matches your dashboard tag
       if (customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] !== undefined) {
         setIsPremium(true);
         savePremiumStatus(true);
         Alert.alert('Thank You!', 'Thank you for your generous donation!');
+      } else {
+        console.log('[Donate] Entitlement', PREMIUM_ENTITLEMENT_ID, 'not found in active entitlements after purchase.');
       }
     } catch (error) {
+      console.log('[Donate] Purchase error:', JSON.stringify(error));
       if (!error.userCancelled) {
         Alert.alert('Transaction Failed', error.message);
       }
