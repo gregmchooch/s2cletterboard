@@ -13,12 +13,15 @@ const ControlPanel = ({
   selectedLetters,
   wordHistory,
   onRemoveLast,
+  onClearLetters,
   onStoreWord,
   onDeleteWord,
   letterColor,
   onLetterColorChange,
   isPremium,
   onPremiumPurchase,
+  boardMode = 'letters',
+  onToggleBoardMode,
 }) => {
   const [historyVisible, setHistoryVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -26,6 +29,14 @@ const ControlPanel = ({
   const [highlightedIndex, setHighlightedIndex] = useState(null);
   const [highlightTimer, setHighlightTimer] = useState(null);
   const word = selectedLetters.join('');
+
+  const handleClearOutput = () => {
+    if (highlightTimer) clearTimeout(highlightTimer);
+    setHighlightedIndex(null);
+    if (onClearLetters) {
+      onClearLetters();
+    }
+  };
 
   const AVAILABLE_COLORS = [
     { hex: '#FFD700', name: 'Gold (Default)' },
@@ -93,40 +104,49 @@ const ControlPanel = ({
       <View style={styles.bottomContainer}>
         <View style={styles.spelledContainer}>
           <View style={[styles.spelledBox, { borderColor: letterColor }]}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.lettersScroll}>
-                <View style={styles.lettersContainer}>
-                  {selectedLetters.length === 0 ? (
-                    <Text style={[styles.placeholderText, { color: letterColor }]}>—</Text>
-                  ) : (
-                    selectedLetters.map((letter, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.letterBubble,
-                          highlightedIndex === index && styles.letterBubbleHighlighted,
-                          { borderColor: letterColor },
-                          highlightedIndex === index && { backgroundColor: letterColor },
-                        ]}
-                        onPress={() => handleLetterPress(index)}
-                      >
-                        <Text style={[
-                          styles.bubbleLetter, 
-                          { color: letterColor },
-                          highlightedIndex === index && { color: '#1a1a1a' }
-                        ]}>
-                          {letter}
-                        </Text>
-                        {highlightedIndex === index && (
-                          <View style={styles.deleteX}>
-                            <Text style={styles.deleteXText}>{String.fromCharCode(0x2715)}</Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    ))
-                  )}
-                </View>
-              </ScrollView>
-            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.lettersScroll}>
+              <View style={styles.lettersContainer}>
+                {selectedLetters.length === 0 ? (
+                  <Text style={[styles.placeholderText, { color: letterColor }]}>—</Text>
+                ) : (
+                  selectedLetters.map((letter, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.letterBubble,
+                        highlightedIndex === index && styles.letterBubbleHighlighted,
+                        { borderColor: letterColor },
+                        highlightedIndex === index && { backgroundColor: letterColor },
+                      ]}
+                      onPress={() => handleLetterPress(index)}
+                    >
+                      <Text style={[
+                        styles.bubbleLetter, 
+                        { color: letterColor },
+                        highlightedIndex === index && { color: '#1a1a1a' }
+                      ]}>
+                        {letter === ' ' ? '?' : letter}
+                      </Text>
+                      {highlightedIndex === index && (
+                        <View style={styles.deleteX}>
+                          <Text style={styles.deleteXText}>{String.fromCharCode(0x2715)}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            </ScrollView>
+            {selectedLetters.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearOutputButton}
+                onPress={handleClearOutput}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.clearOutputText}>{String.fromCharCode(0x2715)}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* STORE BUTTON */}
           <TouchableOpacity
@@ -147,6 +167,16 @@ const ControlPanel = ({
             onPress={() => setHistoryVisible(true)}
           >
             <Text style={styles.historyButtonText}>History</Text>
+          </TouchableOpacity>
+
+          {/* 123 / ABC TOGGLE BUTTON */}
+          <TouchableOpacity
+            style={[styles.modeButton, { backgroundColor: letterColor }]}
+            onPress={onToggleBoardMode}
+          >
+            <Text style={styles.modeButtonText}>
+              {boardMode === 'numbers' ? 'ABC' : '123'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -336,11 +366,30 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFD700',
     borderRadius: 8,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
+    paddingLeft: 10,
+    paddingRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   lettersScroll: {
+    flex: 1,
     height: '100%',
+  },
+  clearOutputButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF5252',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  clearOutputText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+    lineHeight: 15,
+    textAlign: 'center',
   },
   lettersContainer: {
     flexDirection: 'row',
@@ -415,6 +464,21 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     fontWeight: 'bold',
     fontSize: 11,
+  },
+  modeButton: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50,
+    minWidth: 60,
+  },
+  modeButtonText: {
+    color: '#1a1a1a',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,

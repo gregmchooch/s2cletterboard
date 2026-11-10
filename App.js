@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,11 +9,49 @@ import Purchases from 'react-native-purchases';
 import StencilBoard from './src/components/StencilBoard';
 import ControlPanel from './src/components/ControlPanel';
 
+// Safely evaluate a basic math expression (e.g. "5+3", "10*2", "100/4-5")
+const evaluateMathExpression = (expr) => {
+  try {
+    // Normalize operators: replace 'X', 'x', multiplication and division symbols with '*' and '/'
+    const sanitized = expr
+      .replace(/X/gi, '*')
+      .replace(/\u00D7/g, '*')
+      .replace(/\u00F7/g, '/')
+      .replace(/\s+/g, '');
+
+    // Allow only digits, decimal points, and standard arithmetic operators
+    if (!/^[\d\.\+\-\*\/]+$/.test(sanitized)) return null;
+
+    // Must have at least one operator and at least one digit
+    if (!/[\+\-\*\/]/.test(sanitized) || !/\d/.test(sanitized)) return null;
+
+    // Cannot end with an operator (e.g. "5+")
+    if (/[\+\-\*\/]$/.test(sanitized)) return null;
+
+    // Evaluate safely
+    // eslint-disable-next-line no-new-func
+    const result = Function(`"use strict"; return (${sanitized})`)();
+
+    if (typeof result !== 'number' || !isFinite(result)) return null;
+
+    // Round up to 4 decimal places to prevent floating point inaccuracies like 0.1 + 0.2
+    const rounded = Math.round(result * 10000) / 10000;
+    return String(rounded);
+  } catch {
+    return null;
+  }
+};
+
 const App = () => {
   const [selectedLetters, setSelectedLetters] = useState([]);
   const [wordHistory, setWordHistory] = useState([]);
   const [letterColor, setLetterColor] = useState('#FFD700');
   const [isPremium, setIsPremium] = useState(false);
+  const [boardMode, setBoardMode] = useState('letters'); // 'letters' | 'numbers'
+
+  const handleToggleBoardMode = () => {
+    setBoardMode((prev) => (prev === 'letters' ? 'numbers' : 'letters'));
+  };
 
   // Load history and premium status on app start
   useEffect(() => {
@@ -88,11 +126,32 @@ const App = () => {
   };
 
   const handleLetterSelected = (letter) => {
+    if (letter === '=') {
+      setSelectedLetters((prevLetters) => {
+        // Find expression after the last '=' if any, or whole string
+        const lastEqualIdx = prevLetters.lastIndexOf('=');
+        const exprTokens = lastEqualIdx >= 0 ? prevLetters.slice(lastEqualIdx + 1) : prevLetters;
+        const exprStr = exprTokens.join('');
+
+        const calculation = evaluateMathExpression(exprStr);
+        if (calculation !== null) {
+          // Append '=' followed by the calculated result characters
+          return [...prevLetters, '=', ...calculation.split('')];
+        }
+        return [...prevLetters, '='];
+      });
+      return;
+    }
+
     setSelectedLetters((prevLetters) => [...prevLetters, letter]);
   };
 
   const handleRemoveLetter = (index) => {
     setSelectedLetters((prevLetters) => prevLetters.filter((_, i) => i !== index));
+  };
+
+  const handleClearLetters = () => {
+    setSelectedLetters([]);
   };
 
   const handleStoreWord = () => {
@@ -184,6 +243,7 @@ const App = () => {
         <StencilBoard 
           onLetterSelected={handleLetterSelected}
           letterColor={letterColor}
+          boardMode={boardMode}
         />
       </View>
 
@@ -191,12 +251,15 @@ const App = () => {
         selectedLetters={selectedLetters}
         wordHistory={wordHistory}
         onRemoveLast={handleRemoveLetter}
+        onClearLetters={handleClearLetters}
         onStoreWord={handleStoreWord}
         onDeleteWord={handleDeleteWord}
         letterColor={letterColor}
         onLetterColorChange={handleLetterColorChange}
         isPremium={isPremium}
         onPremiumPurchase={handlePremiumPurchase}
+        boardMode={boardMode}
+        onToggleBoardMode={handleToggleBoardMode}
       />
     </SafeAreaView>
   );

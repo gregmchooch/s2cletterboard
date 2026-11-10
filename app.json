@@ -2,7 +2,7 @@
   "expo": {
     "name": "AlphaClick: A Tool for S2C Learners",
     "slug": "alphaclick",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "landscape",
     "icon": "./assets/AlphaClickCompliant-icon.png",
     "userInterfaceStyle": "light",
@@ -15,8 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gregmchooch.alphaclick",
-      "buildNumber": "1",
-        "infoPlist": {
+      "infoPlist": {
             "ITSAppUsesNonExemptEncryption": false,
             "UIDeviceFamily": [ 2 ]
         }
