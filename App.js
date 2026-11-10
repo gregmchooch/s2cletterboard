@@ -3,32 +3,11 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
-import * as SplashScreen from 'expo-splash-screen';
 import StencilBoard from './src/components/StencilBoard';
 import ControlPanel from './src/components/ControlPanel';
-
-// Must match the entitlement identifier configured in the RevenueCat dashboard
-const PREMIUM_ENTITLEMENT_ID = 'alphaclick_premium';
-
-// Exact product identifiers for each donation amount, as configured in
-// App Store Connect / RevenueCat. Used for direct lookup (no pattern matching).
-const DONATION_PRODUCT_IDS = {
-  5: 'alphaclick_donation_5_consummable',
-  10: 'alphaclick_donation_10_consummable',
-  20: 'alphaclick_donation_20_consummable',
-  100: 'alphaclick_donation_100_consummable',
-};
-
-// Keep the native splash screen visible until we explicitly hide it below
-SplashScreen.preventAutoHideAsync().catch(() => {});
-
-// Extra time (ms) to keep the splash screen visible after the app is ready,
-// so it doesn't disappear too quickly.
-const SPLASH_EXTRA_DELAY = 1000;
 
 const App = () => {
   const [selectedLetters, setSelectedLetters] = useState([]);
@@ -38,20 +17,9 @@ const App = () => {
 
   // Load history and premium status on app start
   useEffect(() => {
-    const prepare = async () => {
-      await Promise.all([
-        initializeRevenueCat(),
-        loadHistory(),
-        loadPremiumStatus(),
-      ]);
-
-      // Keep splash screen up a little longer so it doesn't flash away too fast
-      setTimeout(() => {
-        SplashScreen.hideAsync().catch(() => {});
-      }, SPLASH_EXTRA_DELAY);
-    };
-
-    prepare();
+    initializeRevenueCat();
+    loadHistory();
+    loadPremiumStatus();
   }, []);
 
   const initializeRevenueCat = async () => {
@@ -175,60 +143,37 @@ const App = () => {
     saveLetterColor(color);
   };
 
-  const handlePremiumPurchase = async (amount) => {
+  const handlePremiumPurchase = async () => {
     try {
-      const productId = DONATION_PRODUCT_IDS[amount];
-      if (!productId) {
-        console.log('[Donate] No product ID configured for amount:', amount);
-        Alert.alert('Unavailable', 'This donation option is not available.');
-        return;
-      }
-
       const offerings = await Purchases.getOfferings();
-      console.log('[Donate] Offerings fetched:', JSON.stringify({
-        current: offerings.current?.identifier,
-        packageCount: offerings.current?.availablePackages?.length,
-      }));
 
-      if (offerings.current === null || offerings.current.availablePackages.length === 0) {
-        console.log('[Donate] No current offering / packages available.');
-        Alert.alert('Unavailable', 'Donation options are not available right now. Please try again later.');
-        return;
-      }
+      if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
+        // Get the monthly subscription package
+        const package_ = offerings.current.availablePackages[0];
 
-      const availablePackages = offerings.current.availablePackages;
-      console.log('[Donate] Available packages:', availablePackages.map((p) => ({
-        identifier: p.identifier,
-        productId: p.product?.identifier,
-        price: p.product?.priceString,
-      })));
+        console.log('Attempting purchase of package:', package_.identifier);
 
-      // Exact match on the product identifier configured for this donation amount
-      const pkg = availablePackages.find((p) => p.product?.identifier === productId);
+        const { customerInfo } = await Purchases.purchasePackage(package_);
 
-      if (!pkg) {
-        console.log('[Donate] No package found for product ID:', productId);
-        Alert.alert('Unavailable', 'This donation option is not available right now. Please try again later.');
-        return;
-      }
+        // Check if purchase was successful by looking at active entitlements
+        const entitlements = customerInfo.entitlements.active;
 
-      console.log('[Donate] Selected package for amount', amount, ':', pkg.identifier, pkg.product?.identifier, pkg.product?.priceString);
+        console.log('Active entitlements:', Object.keys(entitlements));
 
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
-      console.log('[Donate] Purchase completed. Active entitlements:', Object.keys(customerInfo.entitlements.active));
-
-      // Confirm your specific entitlement identifier matches your dashboard tag
-      if (customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] !== undefined) {
-        setIsPremium(true);
-        savePremiumStatus(true);
-        Alert.alert('Thank You!', 'Thank you for your generous donation!');
+        // Check for any active entitlement (could be 'premium' or other names)
+        if (Object.keys(entitlements).length > 0) {
+          setIsPremium(true);
+          savePremiumStatus(true);
+          console.log('Premium access granted!');
+        }
       } else {
-        console.log('[Donate] Entitlement', PREMIUM_ENTITLEMENT_ID, 'not found in active entitlements after purchase.');
+        console.log('No packages available for purchase');
       }
     } catch (error) {
-      console.log('[Donate] Purchase error:', JSON.stringify(error));
-      if (!error.userCancelled) {
-        Alert.alert('Transaction Failed', error.message);
+      console.log('Error processing premium purchase:', error);
+      // User cancelled purchase is a normal flow, not an error
+      if (error.code !== 'PURCHASE_CANCELLED') {
+        console.log('Purchase error details:', error);
       }
     }
   };

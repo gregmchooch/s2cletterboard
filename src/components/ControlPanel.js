@@ -80,11 +80,6 @@ const ControlPanel = ({
     setSettingsVisible(true);
   };
 
-  const handleDonateOpen = () => {
-    setHistoryVisible(false);
-    setPremiumModalVisible(true);
-  };
-
   // Debug: Log character codes for special symbols
   React.useEffect(() => {
     console.log('Special Characters Debug:');
@@ -161,7 +156,6 @@ const ControlPanel = ({
         visible={historyVisible}
         transparent={true}
         animationType="slide"
-        supportedOrientations={['landscape', 'landscape-left', 'landscape-right']}
         onRequestClose={() => setHistoryVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -184,7 +178,7 @@ const ControlPanel = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.settingsLink}
-                  onPress={handleDonateOpen}
+                  onPress={() => setPremiumModalVisible(true)}
                 >
                   <Text style={[styles.settingsLinkText, { color: letterColor }]}>Donate</Text>
                 </TouchableOpacity>
@@ -228,7 +222,6 @@ const ControlPanel = ({
         visible={settingsVisible}
         transparent={true}
         animationType="fade"
-        supportedOrientations={['landscape', 'landscape-left', 'landscape-right']}
         onRequestClose={() => setSettingsVisible(false)}
       >
         <View style={styles.settingsOverlay}>
@@ -289,7 +282,6 @@ const ControlPanel = ({
         visible={premiumModalVisible}
         transparent={true}
         animationType="fade"
-        supportedOrientations={['landscape', 'landscape-left', 'landscape-right']}
         onRequestClose={() => setPremiumModalVisible(false)}
       >
         <View style={styles.premiumOverlay}>
@@ -309,26 +301,14 @@ const ControlPanel = ({
               </Text>
             </ScrollView>
 
-            <View style={styles.donateAmountRow}>
-              {[5, 10, 20, 100].map((amount) => (
-                <TouchableOpacity
-                  key={amount}
-                  style={[styles.donateAmountButton, { backgroundColor: letterColor }]}
-                  onPress={async () => {
-                    await onPremiumPurchase(amount);
-                    setPremiumModalVisible(false);
-                  }}
-                >
-                  <Text style={styles.donateAmountText}>${amount}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             <TouchableOpacity
-              style={styles.donateCancelButton}
-              onPress={() => setPremiumModalVisible(false)}
+              style={[styles.premiumDonateButton, { backgroundColor: letterColor }]}
+              onPress={async () => {
+                await onPremiumPurchase();
+                setPremiumModalVisible(false);
+              }}
             >
-              <Text style={[styles.donateCancelText, { color: letterColor }]}>Cancel</Text>
+              <Text style={styles.premiumDonateText}>Donate - $4.99</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -687,36 +667,6 @@ const styles = StyleSheet.create({
   },
   premiumDonateText: {
     color: '#1a1a1a',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  donateAmountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 15,
-  },
-  donateAmountButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  donateAmountText: {
-    color: '#1a1a1a',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  donateCancelButton: {
-    paddingVertical: 14,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#666',
-  },
-  donateCancelText: {
     fontWeight: 'bold',
     fontSize: 16,
   },

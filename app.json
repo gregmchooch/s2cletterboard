@@ -18,15 +18,7 @@
       "buildNumber": "1",
         "infoPlist": {
             "ITSAppUsesNonExemptEncryption": false,
-            "UIDeviceFamily": [ 1, 2 ],
-            "UISupportedInterfaceOrientations": [
-                "UIInterfaceOrientationLandscapeLeft",
-                "UIInterfaceOrientationLandscapeRight"
-            ],
-            "UISupportedInterfaceOrientations~ipad": [
-                "UIInterfaceOrientationLandscapeLeft",
-                "UIInterfaceOrientationLandscapeRight"
-            ]
+            "UIDeviceFamily": [ 2 ]
         }
     },
     "android": {
@@ -42,16 +34,6 @@
     "web": {
       "favicon": "./assets/AlphaClick-icon.png"
     },
-    "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/AlphaClick-Splash.jpg",
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ]
-    ],
     "extra": {
       "eas": {
         "projectId": "37d79619-dbc3-469f-ac49-d718c5ffd64b"
