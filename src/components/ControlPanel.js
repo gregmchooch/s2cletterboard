@@ -125,7 +125,7 @@ const ControlPanel = ({
                         { color: letterColor },
                         highlightedIndex === index && { color: '#1a1a1a' }
                       ]}>
-                        {letter === ' ' ? '?' : letter}
+                        {letter}
                       </Text>
                       {highlightedIndex === index && (
                         <View style={styles.deleteX}>
